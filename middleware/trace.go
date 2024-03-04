@@ -1,15 +1,13 @@
 package middleware
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 )
 
 func Trace(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Default().Println("handling", r.Method, r.URL)
-		defer log.Default().Println("handled", r.Method, r.URL)
-
+		slog.Info("handling", "method", r.Method, "url", r.URL)
 		handler(w, r)
 	}
 }
