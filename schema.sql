@@ -1,0 +1,20 @@
+CREATE TABLE users (
+	id SERIAL PRIMARY KEY,
+	email VARCHAR(256) UNIQUE NOT NULL
+);
+
+CREATE TABLE models (
+	id SERIAL PRIMARY KEY,
+	name VARCHAR(256) UNIQUE NOT NULL
+);
+
+CREATE TABLE model_user_relations (
+	modelId INT REFERENCES models(id),
+	userId INT REFERENCES users(id)
+);
+
+CREATE TABLE parameters (
+	id SERIAL PRIMARY KEY,
+	name VARCHAR(256) UNIQUE NOT NULL,
+	modelId INT REFERENCES models(id)
+);
