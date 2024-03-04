@@ -74,14 +74,20 @@ func createToken(secret, username string) (string, error) {
 func (s *server) createModel(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	var cmr modelCreationRequest
-	_ = decoder.Decode(&cmr)
+	err := decoder.Decode(&cmr)
+	if err != nil {
+		slog.WarnContext(r.Context(), fmt.Sprintf("could not decode json: %v", err.Error()))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	sqlStatement := `INSERT INTO models (name)
 	                 VALUES ($1)
 					 RETURNING id`
 	modelId := 0
-	err := s.db.QueryRowContext(r.Context(), sqlStatement, cmr.Name).Scan(&modelId)
+	err = s.db.QueryRowContext(r.Context(), sqlStatement, cmr.Name).Scan(&modelId)
 	if err != nil {
+		slog.WarnContext(r.Context(), fmt.Sprintf("error creating new model: %v", err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -90,6 +96,7 @@ func (s *server) createModel(w http.ResponseWriter, r *http.Request) {
 	resp := modelCreationResponse{ModelId: modelId}
 	err = json.NewEncoder(w).Encode(resp)
 	if err != nil {
+		slog.WarnContext(r.Context(), fmt.Sprintf("could not encode json: %v", err.Error()))
 		http.Error(w, err.Error(), 500)
 		return
 	}
