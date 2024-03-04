@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/gossie/modelling-service/middleware"
+	"github.com/gossie/modelling-service/server"
 	_ "github.com/lib/pq"
 )
 
@@ -47,6 +47,8 @@ func getOrDefault(env, defaultValue string) string {
 }
 
 func main() {
+	customizeLogging()
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -60,10 +62,8 @@ func main() {
 	db := connectToDB()
 	defer db.Close()
 
-	http.HandleFunc("POST /login", middleware.Trace(middleware.ContentType("application/json", login(jwtSecrect))))
-	http.HandleFunc("POST /models", middleware.AuthenticatedRequest(jwtSecrect, createModel))
-	http.HandleFunc("GET /models/{modelId}", middleware.AuthenticatedRequest(jwtSecrect, getModel))
+	svr := server.NewServer(db, jwtSecrect)
 
 	slog.Info("starting server on port " + port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	log.Fatal(http.ListenAndServe(":"+port, svr))
 }

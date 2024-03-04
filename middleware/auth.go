@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -14,6 +15,7 @@ func AuthenticatedRequest(secret string, handler http.HandlerFunc) http.HandlerF
 			func(w http.ResponseWriter, r *http.Request) {
 				token, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 				if !verifyToken(token, secret) {
+					slog.InfoContext(r.Context(), "token is not valid")
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
