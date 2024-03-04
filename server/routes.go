@@ -81,9 +81,7 @@ func (s *server) createModel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sqlStatement := `INSERT INTO models (name)
-	                 VALUES ($1)
-					 RETURNING id`
+	sqlStatement := "INSERT INTO models (name) VALUES ($1) RETURNING id"
 	modelId := 0
 	err = s.db.QueryRowContext(r.Context(), sqlStatement, cmr.Name).Scan(&modelId)
 	if err != nil {
