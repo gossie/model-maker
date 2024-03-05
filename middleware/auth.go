@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -8,29 +9,33 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func AuthenticatedRequest(secret string, handler http.HandlerFunc) http.HandlerFunc {
-	return Trace(
-		ContentType(
-			"application/json",
-			func(w http.ResponseWriter, r *http.Request) {
-				token, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-				if !verifyToken(token, secret) {
-					slog.InfoContext(r.Context(), "token is not valid")
-					w.WriteHeader(http.StatusUnauthorized)
-					return
-				}
-				handler(w, r)
-			}))
+type userIdentifier string
+
+const UserIdentifierKey = userIdentifier("userIdentifier")
+
+func AuthenticatedRequest(secret string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tokenStr, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+		token := verifyToken(tokenStr, secret)
+		if token == nil || !token.Valid {
+			slog.InfoContext(r.Context(), "token is not valid")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		subject, _ := token.Claims.GetSubject() // TODO: handle err
+		next(w, r.WithContext(context.WithValue(r.Context(), UserIdentifierKey, subject)))
+	}
 }
 
-func verifyToken(tokenStr, secret string) bool {
+func verifyToken(tokenStr, secret string) *jwt.Token {
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		return []byte(secret), nil
 	})
 
 	if err != nil {
-		return false
+		return nil
 	}
 
-	return token.Valid
+	return token
 }

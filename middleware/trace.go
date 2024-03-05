@@ -12,16 +12,16 @@ type requestId string
 
 const RequestIdKey = requestId("requestId")
 
-func Trace(handler http.HandlerFunc) http.HandlerFunc {
+func traceRequest(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		newRequestId := uuid.NewString()
-		logInComingRequests(handler)(w, r.WithContext(context.WithValue(r.Context(), RequestIdKey, newRequestId)))
+		next(w, r.WithContext(context.WithValue(r.Context(), RequestIdKey, newRequestId)))
 	}
 }
 
-func logInComingRequests(handler http.HandlerFunc) http.HandlerFunc {
+func logIncomingRequests(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		slog.InfoContext(r.Context(), "handle incoming request", "method", r.Method, "url", r.URL)
-		handler(w, r)
+		slog.InfoContext(r.Context(), "handle incoming request", "method", r.Method, "url", r.URL.Path)
+		next(w, r)
 	}
 }
