@@ -79,3 +79,31 @@ func (s *server) saveModel(ctx context.Context, userEmail string, cmr modelCreat
 
 	return modelId, nil
 }
+
+func (s *server) findAllParametersByModelId(ctx context.Context, modelId string) ([]parameter, error) {
+	rows, err := s.db.QueryContext(ctx, "SELECT id, name FROM parameters WHERE modelId = $1", modelId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	parameters := make([]parameter, 0)
+
+	for rows.Next() {
+		var id int
+		var name string
+		err = rows.Scan(&id, &name)
+		if err != nil {
+			return nil, err
+		}
+		parameters = append(parameters, parameter{id, name})
+	}
+
+	return parameters, nil
+}
+
+func (s *server) saveParameter(ctx context.Context, modelId string, pmr parameterCreationRequest) (int, error) {
+	var parameterId int
+	err := s.db.QueryRowContext(ctx, "INSERT INTO parameters (name, modelId) VALUES ($1, $2) RETURNING id", pmr.Name, modelId).Scan(&parameterId)
+	return parameterId, err
+}
