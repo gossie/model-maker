@@ -12,28 +12,6 @@ import (
 	"github.com/gossie/modelling-service/middleware"
 )
 
-type loginInfo struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type loginResponse struct {
-	Token string `json:"token"`
-}
-
-type modelCreationRequest struct {
-	Name string `json:"name"`
-}
-
-type modelCreationResponse struct {
-	ModelId int `json:"modelId"`
-}
-
-type model struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
-}
-
 func (s *server) login(secret string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		decoder := json.NewDecoder(r.Body)
@@ -90,7 +68,7 @@ func createToken(secret string, email string) (string, error) {
 }
 
 func (s *server) createModel(w http.ResponseWriter, r *http.Request) {
-	slog.InfoContext(r.Context(), "trying to create a new model")
+	slog.InfoContext(r.Context(), "creating new model")
 
 	email := r.Context().Value(middleware.UserIdentifierKey).(string)
 
@@ -126,6 +104,8 @@ func (s *server) getModels(w http.ResponseWriter, r *http.Request) {
 	models, err := s.findAllModelsByUser(r.Context(), email)
 	if err != nil {
 		slog.WarnContext(r.Context(), fmt.Sprintf("error retrieving models from database: %v", err.Error()))
+		http.Error(w, err.Error(), 500)
+		return
 	}
 
 	err = json.NewEncoder(w).Encode(models)
