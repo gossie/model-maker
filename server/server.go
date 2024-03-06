@@ -28,11 +28,11 @@ func (s *server) routes() {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	http.HandleFunc("POST /login", middleware.Any(s.login(s.jwtSecrect)))
-	http.HandleFunc("POST /models", middleware.AuthenticatedRequest(s.jwtSecrect, s.createModel))
-	http.HandleFunc("GET /models", middleware.AuthenticatedRequest(s.jwtSecrect, s.getModels))
-	http.HandleFunc("GET /models/{modelId}", middleware.AuthenticatedRequest(s.jwtSecrect, s.getModel))
-	http.HandleFunc("POST /models/{modelId}/parameters", middleware.AuthenticatedRequest(s.jwtSecrect, s.createParameter))
-	http.HandleFunc("GET /models/{modelId}/parameters", middleware.AuthenticatedRequest(s.jwtSecrect, s.getParameters))
+	http.HandleFunc("POST /models", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, s.createModel)))
+	http.HandleFunc("GET /models", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, s.getModels)))
+	http.HandleFunc("GET /models/{modelId}", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.getModel))))
+	http.HandleFunc("POST /models/{modelId}/parameters", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.createParameter))))
+	http.HandleFunc("GET /models/{modelId}/parameters", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.getParameters))))
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {

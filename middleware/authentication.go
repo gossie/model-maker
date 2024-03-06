@@ -14,7 +14,7 @@ type userIdentifier string
 const UserIdentifierKey = userIdentifier("userIdentifier")
 
 func AuthenticatedRequest(secret string, next http.HandlerFunc) http.HandlerFunc {
-	return Any(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		tokenStr, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 		token := verifyToken(tokenStr, secret)
 		if token == nil || !token.Valid {
@@ -25,7 +25,7 @@ func AuthenticatedRequest(secret string, next http.HandlerFunc) http.HandlerFunc
 
 		subject, _ := token.Claims.GetSubject() // TODO: handle err
 		next(w, r.WithContext(context.WithValue(r.Context(), UserIdentifierKey, subject)))
-	})
+	}
 }
 
 func verifyToken(tokenStr, secret string) *jwt.Token {
