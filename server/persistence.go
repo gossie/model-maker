@@ -2,31 +2,42 @@ package server
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
+
+	"github.com/gossie/configurator"
+	"github.com/gossie/modelling-service/middleware"
 )
 
 func (s *server) findModel(ctx context.Context, modelId string) (model, error) {
-	result := model{}
-
+	sqlStatement := `
+		SELECT m.id, m.name, t.translation FROM models m
+		JOIN model_translations t
+		ON m.id = t.modelId
+		WHERE m.id = $1 AND t.language = $2
+	`
 	var id int
 	var name string
-	row := s.db.QueryRowContext(ctx, "SELECT * FROM models WHERE id = $1", modelId)
-	err := row.Scan(&id, &name)
+	var translation sql.NullString
+	row := s.db.QueryRowContext(ctx, sqlStatement, modelId, ctx.Value(middleware.LanguageKey))
+	err := row.Scan(&id, &name, &translation)
 
-	result.Id = id
-	result.Name = name
-	return result, err
+	return model{id, name, translation.String}, err
 }
 
 func (s *server) findAllModelsByUser(ctx context.Context, userEmail string) ([]model, error) {
 	sqlStatement := `
-		SELECT id, name
-		FROM models
-		JOIN model_user_relations
-		ON models.id = model_user_relations.modelid AND model_user_relations.userid = (SELECT id FROM users WHERE email = $1);
+		SELECT m.id, m.name, t.translation
+		FROM models m
+		JOIN model_user_relations mur
+		ON m.id = mur.modelid
+		JOIN model_translations t ON m.id = t.modelId
+		WHERE mur.userid = (SELECT id FROM users WHERE email = $1) AND t.language = $2;
 	`
-	rows, err := s.db.QueryContext(ctx, sqlStatement, userEmail)
+	rows, err := s.db.QueryContext(ctx, sqlStatement, userEmail, ctx.Value(middleware.LanguageKey))
 	if err != nil {
 		return nil, err
 	}
@@ -37,11 +48,12 @@ func (s *server) findAllModelsByUser(ctx context.Context, userEmail string) ([]m
 	for rows.Next() {
 		var id int
 		var name string
-		err = rows.Scan(&id, &name)
+		var translation sql.NullString
+		err = rows.Scan(&id, &name, &translation)
 		if err != nil {
 			return nil, err
 		}
-		models = append(models, model{id, name})
+		models = append(models, model{id, name, translation.String})
 	}
 
 	return models, nil
@@ -81,7 +93,15 @@ func (s *server) saveModel(ctx context.Context, userEmail string, cmr modelCreat
 }
 
 func (s *server) findAllParametersByModelId(ctx context.Context, modelId string) ([]parameter, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT id, name FROM parameters WHERE modelId = $1", modelId)
+	sqlStatement := `
+		SELECT p.id, p.name, p.valueType, p.value, t.translation
+		FROM parameters p
+		JOIN parameter_translations t
+		ON p.id = t.parameterId
+		WHERE p.modelId = $1 AND t.language = $2
+	`
+
+	rows, err := s.db.QueryContext(ctx, sqlStatement, modelId, ctx.Value(middleware.LanguageKey))
 	if err != nil {
 		return nil, err
 	}
@@ -92,11 +112,35 @@ func (s *server) findAllParametersByModelId(ctx context.Context, modelId string)
 	for rows.Next() {
 		var id int
 		var name string
-		err = rows.Scan(&id, &name)
+		var valueType configurator.ValueType
+		var paramValue sql.NullString
+		var translation sql.NullString
+		err = rows.Scan(&id, &name, &valueType, &paramValue, &translation)
 		if err != nil {
 			return nil, err
 		}
-		parameters = append(parameters, parameter{id, name})
+
+		stringValues := make([]string, 0)
+		if paramValue.Valid {
+			decoder := json.NewDecoder(strings.NewReader(paramValue.String))
+			err = nil
+			switch valueType {
+			case configurator.IntSetType:
+				values := make([]int, 0)
+				err = decoder.Decode(&values)
+				for _, v := range values {
+					stringValues = append(stringValues, fmt.Sprint(v))
+				}
+			case configurator.StringSetType:
+				err = decoder.Decode(&stringValues)
+			}
+
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		parameters = append(parameters, parameter{id, name, translation.String, valueType, value{stringValues}})
 	}
 
 	return parameters, nil
@@ -104,6 +148,11 @@ func (s *server) findAllParametersByModelId(ctx context.Context, modelId string)
 
 func (s *server) saveParameter(ctx context.Context, modelId string, pmr parameterCreationRequest) (int, error) {
 	var parameterId int
-	err := s.db.QueryRowContext(ctx, "INSERT INTO parameters (name, modelId) VALUES ($1, $2) RETURNING id", pmr.Name, modelId).Scan(&parameterId)
+	err := s.db.QueryRowContext(ctx, "INSERT INTO parameters (name, valueType, modelId) VALUES ($1, $2, $3) RETURNING id", pmr.Name, pmr.ValueType, modelId).Scan(&parameterId)
 	return parameterId, err
+}
+
+func (s *server) deleteParameterFromModel(ctx context.Context, modelId string, parameterId string) error {
+	_, err := s.db.ExecContext(ctx, "DELETE FROM parameters WHERE id = $1 AND modelId = $2", parameterId, modelId)
+	return err
 }

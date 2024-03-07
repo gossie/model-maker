@@ -43,8 +43,9 @@ func (s *server) createParameter(w http.ResponseWriter, r *http.Request) {
 
 	parameterId, err := s.saveParameter(r.Context(), r.PathValue("modelId"), pmr)
 	if err != nil {
-		slog.WarnContext(r.Context(), fmt.Sprintf("error creating new model: %v", err.Error()))
+		slog.WarnContext(r.Context(), fmt.Sprintf("error creating new parameter: %v", err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	resp := parameterCreationResponse{ParameterId: parameterId}
@@ -54,4 +55,18 @@ func (s *server) createParameter(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
+}
+
+func (s *server) deleteParameter(w http.ResponseWriter, r *http.Request) {
+	modelId, parameterId := r.PathValue("modelId"), r.PathValue("parameterId")
+	slog.InfoContext(r.Context(), fmt.Sprintf("deleting parameter - modelId: %v, parameterId: %v", modelId, parameterId))
+
+	err := s.deleteParameterFromModel(r.Context(), modelId, parameterId)
+	if err != nil {
+		slog.WarnContext(r.Context(), fmt.Sprintf("error deleting parameter - modelId = %v, parameterId = %v: %v", modelId, parameterId, err.Error()))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(200)
 }

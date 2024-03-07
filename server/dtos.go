@@ -1,5 +1,7 @@
 package server
 
+import "github.com/gossie/configurator"
+
 type loginInfo struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -18,12 +20,14 @@ type modelCreationResponse struct {
 }
 
 type model struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
+	Id          int    `json:"id"`
+	Name        string `json:"name"`
+	Translation string `json:"translation"`
 }
 
 type parameterCreationRequest struct {
-	Name string `json:"name"`
+	Name      string                 `json:"name"`
+	ValueType configurator.ValueType `json:"valueType"`
 }
 
 type parameterCreationResponse struct {
@@ -31,6 +35,13 @@ type parameterCreationResponse struct {
 }
 
 type parameter struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
+	Id          int                    `json:"id"`
+	Name        string                 `json:"name"`
+	Translation string                 `json:"translation"`
+	ValueType   configurator.ValueType `json:"valueType"`
+	Value       value                  `json:"value"`
+}
+
+type value struct {
+	Values []string `json:"values"`
 }
