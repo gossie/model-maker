@@ -11,10 +11,11 @@ const LanguageKey = language("language")
 
 func Any(next http.HandlerFunc) http.HandlerFunc {
 	return traceRequest(
-		logIncomingRequests(
-			withLanguage(
-				addContentType("application/json",
-					enableCors(next)))))
+		profile(
+			logIncomingRequests(
+				withLanguage(
+					addContentType("application/json",
+						enableCors(next))))))
 }
 
 func withLanguage(next http.HandlerFunc) http.HandlerFunc {

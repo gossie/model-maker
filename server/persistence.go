@@ -96,9 +96,9 @@ func (s *server) findAllParametersByModelId(ctx context.Context, modelId string)
 	sqlStatement := `
 		SELECT p.id, p.name, p.valueType, p.value, t.translation
 		FROM parameters p
-		JOIN parameter_translations t
+		LEFT JOIN parameter_translations t
 		ON p.id = t.parameterId
-		WHERE p.modelId = $1 AND t.language = $2
+		WHERE p.modelId = $1 AND (t.language = $2 OR t.language IS NULL)
 	`
 
 	rows, err := s.db.QueryContext(ctx, sqlStatement, modelId, ctx.Value(middleware.LanguageKey))
@@ -155,4 +155,77 @@ func (s *server) saveParameter(ctx context.Context, modelId string, pmr paramete
 func (s *server) deleteParameterFromModel(ctx context.Context, modelId string, parameterId string) error {
 	_, err := s.db.ExecContext(ctx, "DELETE FROM parameters WHERE id = $1 AND modelId = $2", parameterId, modelId)
 	return err
+}
+
+func (s *server) findAllParameterTranslations(ctx context.Context, parameterId string) ([]translation, error) {
+	sqlStatement := `
+		SELECT id, field, language, translation
+		FROM parameter_translations
+		WHERE parameterId = $1
+	`
+
+	rows, err := s.db.QueryContext(ctx, sqlStatement, parameterId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	translations := make([]translation, 0)
+
+	for rows.Next() {
+		var id int
+		var field string
+		var language string
+		var value string
+		err = rows.Scan(&id, &field, &language, &value)
+		if err != nil {
+			return nil, err
+		}
+
+		translations = append(translations, translation{id, field, language, value})
+	}
+
+	return translations, nil
+}
+
+func (s *server) saveParameterTranslations(ctx context.Context, parameterId string, tcr translationModificationRequest) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	if len(tcr.NewTranslations) > 0 {
+		args := make([]any, 0, len(tcr.NewTranslations)*4)
+		valueStrings := make([]string, 0, len(tcr.NewTranslations))
+		for _, translation := range tcr.NewTranslations {
+			valueStrings = append(valueStrings, fmt.Sprintf("($%v, $%v, $%v, $%v)", len(args)+1, len(args)+2, len(args)+3, len(args)+4))
+			args = append(args, parameterId, translation.Field, translation.Language, translation.Value)
+		}
+
+		sqlStatement := `
+		INSERT INTO parameter_translations (parameterId, field, language, translation)
+		VALUES ` + strings.Join(valueStrings, ", ")
+		_, err = tx.ExecContext(ctx, sqlStatement, args...)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	if len(tcr.UpdatedTranslations) > 0 {
+		for _, translation := range tcr.UpdatedTranslations {
+			sqlStatement := `
+				UPDATE parameter_translations
+				SET language = $1, translation = $2
+				WHERE id = $3
+			`
+			_, err = tx.ExecContext(ctx, sqlStatement, translation.Language, translation.Value, translation.Id)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+	}
+
+	return tx.Commit()
 }

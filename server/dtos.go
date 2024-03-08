@@ -45,3 +45,15 @@ type parameter struct {
 type value struct {
 	Values []string `json:"values"`
 }
+
+type translationModificationRequest struct {
+	NewTranslations     []translation `json:"newTranslations"`
+	UpdatedTranslations []translation `json:"updatedTranslations"`
+}
+
+type translation struct {
+	Id       int    `json:"id"`
+	Field    string `json:"field"`
+	Language string `json:"language"`
+	Value    string `json:"value"`
+}

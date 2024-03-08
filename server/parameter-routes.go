@@ -27,7 +27,7 @@ func (s *server) getParameters(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *server) createParameter(w http.ResponseWriter, r *http.Request) {
+func (s *server) postParameter(w http.ResponseWriter, r *http.Request) {
 	slog.InfoContext(r.Context(), "creating new parameter")
 
 	// email := r.Context().Value(middleware.UserIdentifierKey).(string)
@@ -64,6 +64,48 @@ func (s *server) deleteParameter(w http.ResponseWriter, r *http.Request) {
 	err := s.deleteParameterFromModel(r.Context(), modelId, parameterId)
 	if err != nil {
 		slog.WarnContext(r.Context(), fmt.Sprintf("error deleting parameter - modelId = %v, parameterId = %v: %v", modelId, parameterId, err.Error()))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(200)
+}
+
+func (s *server) getParameterTranslations(w http.ResponseWriter, r *http.Request) {
+	modelId, parameterId := r.PathValue("modelId"), r.PathValue("parameterId")
+	slog.InfoContext(r.Context(), fmt.Sprintf("retrieving parameter translations - modelId: %v, parameterId: %v", modelId, parameterId))
+
+	translations, err := s.findAllParameterTranslations(r.Context(), parameterId)
+	if err != nil {
+		slog.WarnContext(r.Context(), fmt.Sprintf("could not retrieve translations: %v", err.Error()))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = json.NewEncoder(w).Encode(translations)
+	if err != nil {
+		slog.WarnContext(r.Context(), fmt.Sprintf("could not encode json: %v", err.Error()))
+		http.Error(w, err.Error(), 500)
+		return
+	}
+}
+
+func (s *server) putParameterTranslations(w http.ResponseWriter, r *http.Request) {
+	modelId, parameterId := r.PathValue("modelId"), r.PathValue("parameterId")
+	slog.InfoContext(r.Context(), fmt.Sprintf("saving parameter translations - modelId: %v, parameterId: %v", modelId, parameterId))
+
+	decoder := json.NewDecoder(r.Body)
+	var tcr translationModificationRequest
+	err := decoder.Decode(&tcr)
+	if err != nil {
+		slog.WarnContext(r.Context(), fmt.Sprintf("could not decode json: %v", err.Error()))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = s.saveParameterTranslations(r.Context(), parameterId, tcr)
+	if err != nil {
+		slog.WarnContext(r.Context(), fmt.Sprintf("could not save translations: %v", err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

@@ -67,7 +67,7 @@ func createToken(secret string, email string) (string, error) {
 	return tokenString, nil
 }
 
-func (s *server) createModel(w http.ResponseWriter, r *http.Request) {
+func (s *server) postModel(w http.ResponseWriter, r *http.Request) {
 	slog.InfoContext(r.Context(), "creating new model")
 
 	email := r.Context().Value(middleware.UserIdentifierKey).(string)
