@@ -1,4 +1,4 @@
-package server
+package modellingservice
 
 import (
 	"database/sql"
@@ -6,16 +6,24 @@ import (
 	"net/http"
 
 	"github.com/gossie/modelling-service/middleware"
+	"github.com/gossie/modelling-service/persistence"
 )
 
 type server struct {
-	db         *sql.DB
-	jwtSecrect string
+	db                  *sql.DB
+	modelRepository     persistence.ModelRepository
+	parameterRepository persistence.ParameterRepository
+	jwtSecrect          string
 }
 
 func NewServer(db *sql.DB, jwtSecrect string) *server {
+	modelRepo := persistence.NewPsqlModelRepository(db)
+	paramRepo := persistence.NewPsqlParameterRepository(db)
+
 	s := server{
 		db,
+		&modelRepo,
+		&paramRepo,
 		jwtSecrect,
 	}
 	s.routes()

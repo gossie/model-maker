@@ -1,10 +1,12 @@
-package server
+package modellingservice
 
 import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+
+	"github.com/gossie/modelling-service/domain"
 )
 
 func (s *server) getParameters(w http.ResponseWriter, r *http.Request) {
@@ -12,7 +14,7 @@ func (s *server) getParameters(w http.ResponseWriter, r *http.Request) {
 
 	modelId := r.PathValue("modelId")
 
-	models, err := s.findAllParametersByModelId(r.Context(), modelId)
+	models, err := s.parameterRepository.FindAllByModelId(r.Context(), modelId)
 	if err != nil {
 		slog.WarnContext(r.Context(), fmt.Sprintf("error retrieving parameters for model ID %v from database: %v", modelId, err.Error()))
 		http.Error(w, err.Error(), 500)
@@ -33,7 +35,7 @@ func (s *server) postParameter(w http.ResponseWriter, r *http.Request) {
 	// email := r.Context().Value(middleware.UserIdentifierKey).(string)
 
 	decoder := json.NewDecoder(r.Body)
-	var pmr parameterCreationRequest
+	var pmr domain.ParameterCreationRequest
 	err := decoder.Decode(&pmr)
 	if err != nil {
 		slog.WarnContext(r.Context(), fmt.Sprintf("could not decode json: %v", err.Error()))
@@ -41,7 +43,7 @@ func (s *server) postParameter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	parameterId, err := s.saveParameter(r.Context(), r.PathValue("modelId"), pmr)
+	parameterId, err := s.parameterRepository.SaveParameter(r.Context(), r.PathValue("modelId"), pmr)
 	if err != nil {
 		slog.WarnContext(r.Context(), fmt.Sprintf("error creating new parameter: %v", err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -61,7 +63,7 @@ func (s *server) deleteParameter(w http.ResponseWriter, r *http.Request) {
 	modelId, parameterId := r.PathValue("modelId"), r.PathValue("parameterId")
 	slog.InfoContext(r.Context(), fmt.Sprintf("deleting parameter - modelId: %v, parameterId: %v", modelId, parameterId))
 
-	err := s.deleteParameterFromModel(r.Context(), modelId, parameterId)
+	err := s.parameterRepository.DeleteParameter(r.Context(), modelId, parameterId)
 	if err != nil {
 		slog.WarnContext(r.Context(), fmt.Sprintf("error deleting parameter - modelId = %v, parameterId = %v: %v", modelId, parameterId, err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -75,7 +77,7 @@ func (s *server) getParameterTranslations(w http.ResponseWriter, r *http.Request
 	modelId, parameterId := r.PathValue("modelId"), r.PathValue("parameterId")
 	slog.InfoContext(r.Context(), fmt.Sprintf("retrieving parameter translations - modelId: %v, parameterId: %v", modelId, parameterId))
 
-	translations, err := s.findAllParameterTranslations(r.Context(), parameterId)
+	translations, err := s.parameterRepository.FindAllTranslations(r.Context(), parameterId)
 	if err != nil {
 		slog.WarnContext(r.Context(), fmt.Sprintf("could not retrieve translations: %v", err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -95,7 +97,7 @@ func (s *server) putParameterTranslations(w http.ResponseWriter, r *http.Request
 	slog.InfoContext(r.Context(), fmt.Sprintf("saving parameter translations - modelId: %v, parameterId: %v", modelId, parameterId))
 
 	decoder := json.NewDecoder(r.Body)
-	var tcr translationModificationRequest
+	var tcr domain.TranslationModificationRequest
 	err := decoder.Decode(&tcr)
 	if err != nil {
 		slog.WarnContext(r.Context(), fmt.Sprintf("could not decode json: %v", err.Error()))
@@ -103,7 +105,7 @@ func (s *server) putParameterTranslations(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = s.saveParameterTranslations(r.Context(), parameterId, tcr)
+	err = s.parameterRepository.SaveTranslations(r.Context(), parameterId, tcr)
 	if err != nil {
 		slog.WarnContext(r.Context(), fmt.Sprintf("could not save translations: %v", err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)

@@ -1,4 +1,4 @@
-package server
+package modellingservice
 
 import (
 	"database/sql"
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/gossie/modelling-service/domain"
 	"github.com/gossie/modelling-service/middleware"
 )
 
@@ -73,7 +74,7 @@ func (s *server) postModel(w http.ResponseWriter, r *http.Request) {
 	email := r.Context().Value(middleware.UserIdentifierKey).(string)
 
 	decoder := json.NewDecoder(r.Body)
-	var cmr modelCreationRequest
+	var cmr domain.ModelCreationRequest
 	err := decoder.Decode(&cmr)
 	if err != nil {
 		slog.WarnContext(r.Context(), fmt.Sprintf("could not decode json: %v", err.Error()))
@@ -81,7 +82,7 @@ func (s *server) postModel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	modelId, err := s.saveModel(r.Context(), email, cmr)
+	modelId, err := s.modelRepository.SaveModel(r.Context(), email, cmr)
 	if err != nil {
 		slog.InfoContext(r.Context(), fmt.Sprintf("error creating new model: %v", err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -101,7 +102,7 @@ func (s *server) getModels(w http.ResponseWriter, r *http.Request) {
 
 	email := r.Context().Value(middleware.UserIdentifierKey).(string)
 
-	models, err := s.findAllModelsByUser(r.Context(), email)
+	models, err := s.modelRepository.FindAllByUser(r.Context(), email)
 	if err != nil {
 		slog.WarnContext(r.Context(), fmt.Sprintf("error retrieving models from database: %v", err.Error()))
 		http.Error(w, err.Error(), 500)
@@ -120,7 +121,7 @@ func (s *server) getModel(w http.ResponseWriter, r *http.Request) {
 	modelId := r.PathValue("modelId")
 	slog.InfoContext(r.Context(), fmt.Sprintf("retrieving model with id %v", modelId))
 
-	response, err := s.findModel(r.Context(), modelId)
+	response, err := s.modelRepository.FindById(r.Context(), modelId)
 	if err != nil {
 		slog.InfoContext(r.Context(), fmt.Sprintf("could not find model with id %v", modelId))
 		w.WriteHeader(http.StatusNotFound)

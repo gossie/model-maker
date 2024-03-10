@@ -1,4 +1,4 @@
-package server
+package persistence
 
 import (
 	"context"
@@ -9,10 +9,19 @@ import (
 	"strings"
 
 	"github.com/gossie/configurator"
+	"github.com/gossie/modelling-service/domain"
 	"github.com/gossie/modelling-service/middleware"
 )
 
-func (s *server) findModel(ctx context.Context, modelId string) (model, error) {
+type psqlModelRepository struct {
+	db *sql.DB
+}
+
+func NewPsqlModelRepository(db *sql.DB) psqlModelRepository {
+	return psqlModelRepository{db: db}
+}
+
+func (mr *psqlModelRepository) FindById(ctx context.Context, modelId string) (domain.Model, error) {
 	sqlStatement := `
 		SELECT m.id, m.name, t.translation FROM models m
 		JOIN model_translations t
@@ -22,13 +31,13 @@ func (s *server) findModel(ctx context.Context, modelId string) (model, error) {
 	var id int
 	var name string
 	var translation sql.NullString
-	row := s.db.QueryRowContext(ctx, sqlStatement, modelId, ctx.Value(middleware.LanguageKey))
+	row := mr.db.QueryRowContext(ctx, sqlStatement, modelId, ctx.Value(middleware.LanguageKey))
 	err := row.Scan(&id, &name, &translation)
 
-	return model{id, name, translation.String}, err
+	return domain.Model{Id: id, Name: name, Translation: translation.String}, err
 }
 
-func (s *server) findAllModelsByUser(ctx context.Context, userEmail string) ([]model, error) {
+func (mr *psqlModelRepository) FindAllByUser(ctx context.Context, userEmail string) ([]domain.Model, error) {
 	sqlStatement := `
 		SELECT m.id, m.name, t.translation
 		FROM models m
@@ -37,13 +46,13 @@ func (s *server) findAllModelsByUser(ctx context.Context, userEmail string) ([]m
 		JOIN model_translations t ON m.id = t.modelId
 		WHERE mur.userid = (SELECT id FROM users WHERE email = $1) AND t.language = $2;
 	`
-	rows, err := s.db.QueryContext(ctx, sqlStatement, userEmail, ctx.Value(middleware.LanguageKey))
+	rows, err := mr.db.QueryContext(ctx, sqlStatement, userEmail, ctx.Value(middleware.LanguageKey))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	models := make([]model, 0)
+	models := make([]domain.Model, 0)
 
 	for rows.Next() {
 		var id int
@@ -53,14 +62,14 @@ func (s *server) findAllModelsByUser(ctx context.Context, userEmail string) ([]m
 		if err != nil {
 			return nil, err
 		}
-		models = append(models, model{id, name, translation.String})
+		models = append(models, domain.Model{Id: id, Name: name, Translation: translation.String})
 	}
 
 	return models, nil
 }
 
-func (s *server) saveModel(ctx context.Context, userEmail string, cmr modelCreationRequest) (int, error) {
-	tx, _ := s.db.BeginTx(ctx, nil)
+func (mr *psqlModelRepository) SaveModel(ctx context.Context, userEmail string, cmr domain.ModelCreationRequest) (int, error) {
+	tx, _ := mr.db.BeginTx(ctx, nil)
 
 	var userId int
 	row := tx.QueryRowContext(ctx, "SELECT id FROM users WHERE email = $1", userEmail)
@@ -71,14 +80,14 @@ func (s *server) saveModel(ctx context.Context, userEmail string, cmr modelCreat
 	}
 
 	var modelId int
-	err = s.db.QueryRowContext(ctx, "INSERT INTO models (name) VALUES ($1) RETURNING id", cmr.Name).Scan(&modelId)
+	err = mr.db.QueryRowContext(ctx, "INSERT INTO models (name) VALUES ($1) RETURNING id", cmr.Name).Scan(&modelId)
 	if err != nil {
 		_ = tx.Rollback()
 		return -1, err
 	}
 	slog.InfoContext(ctx, fmt.Sprintf("created model with ID %v", modelId))
 
-	_, err = s.db.ExecContext(ctx, "INSERT INTO model_user_relations (modelId, userId) VALUES ($1, $2)", modelId, userId)
+	_, err = mr.db.ExecContext(ctx, "INSERT INTO model_user_relations (modelId, userId) VALUES ($1, $2)", modelId, userId)
 	if err != nil {
 		_ = tx.Rollback()
 		return -1, err
@@ -92,7 +101,15 @@ func (s *server) saveModel(ctx context.Context, userEmail string, cmr modelCreat
 	return modelId, nil
 }
 
-func (s *server) findAllParametersByModelId(ctx context.Context, modelId string) ([]parameter, error) {
+type psqlParameterRepository struct {
+	db *sql.DB
+}
+
+func NewPsqlParameterRepository(db *sql.DB) psqlParameterRepository {
+	return psqlParameterRepository{db: db}
+}
+
+func (pr *psqlParameterRepository) FindAllByModelId(ctx context.Context, modelId string) ([]domain.Parameter, error) {
 	sqlStatement := `
 		SELECT p.id, p.name, p.valueType, p.value, t.translation
 		FROM parameters p
@@ -101,13 +118,13 @@ func (s *server) findAllParametersByModelId(ctx context.Context, modelId string)
 		WHERE p.modelId = $1 AND (t.language = $2 OR t.language IS NULL)
 	`
 
-	rows, err := s.db.QueryContext(ctx, sqlStatement, modelId, ctx.Value(middleware.LanguageKey))
+	rows, err := pr.db.QueryContext(ctx, sqlStatement, modelId, ctx.Value(middleware.LanguageKey))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	parameters := make([]parameter, 0)
+	parameters := make([]domain.Parameter, 0)
 
 	for rows.Next() {
 		var id int
@@ -140,37 +157,37 @@ func (s *server) findAllParametersByModelId(ctx context.Context, modelId string)
 			}
 		}
 
-		parameters = append(parameters, parameter{id, name, translation.String, valueType, value{stringValues}})
+		parameters = append(parameters, domain.Parameter{Id: id, Name: name, Translation: translation.String, ValueType: valueType, Value: domain.Value{Values: stringValues}})
 	}
 
 	return parameters, nil
 }
 
-func (s *server) saveParameter(ctx context.Context, modelId string, pmr parameterCreationRequest) (int, error) {
+func (pr *psqlParameterRepository) SaveParameter(ctx context.Context, modelId string, pmr domain.ParameterCreationRequest) (int, error) {
 	var parameterId int
-	err := s.db.QueryRowContext(ctx, "INSERT INTO parameters (name, valueType, modelId) VALUES ($1, $2, $3) RETURNING id", pmr.Name, pmr.ValueType, modelId).Scan(&parameterId)
+	err := pr.db.QueryRowContext(ctx, "INSERT INTO parameters (name, valueType, modelId) VALUES ($1, $2, $3) RETURNING id", pmr.Name, pmr.ValueType, modelId).Scan(&parameterId)
 	return parameterId, err
 }
 
-func (s *server) deleteParameterFromModel(ctx context.Context, modelId string, parameterId string) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM parameters WHERE id = $1 AND modelId = $2", parameterId, modelId)
+func (pr *psqlParameterRepository) DeleteParameter(ctx context.Context, modelId string, parameterId string) error {
+	_, err := pr.db.ExecContext(ctx, "DELETE FROM parameters WHERE id = $1 AND modelId = $2", parameterId, modelId)
 	return err
 }
 
-func (s *server) findAllParameterTranslations(ctx context.Context, parameterId string) ([]translation, error) {
+func (pr *psqlParameterRepository) FindAllTranslations(ctx context.Context, parameterId string) ([]domain.Translation, error) {
 	sqlStatement := `
 		SELECT id, field, language, translation
 		FROM parameter_translations
 		WHERE parameterId = $1
 	`
 
-	rows, err := s.db.QueryContext(ctx, sqlStatement, parameterId)
+	rows, err := pr.db.QueryContext(ctx, sqlStatement, parameterId)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	translations := make([]translation, 0)
+	translations := make([]domain.Translation, 0)
 
 	for rows.Next() {
 		var id int
@@ -182,14 +199,14 @@ func (s *server) findAllParameterTranslations(ctx context.Context, parameterId s
 			return nil, err
 		}
 
-		translations = append(translations, translation{id, field, language, value})
+		translations = append(translations, domain.Translation{Id: id, Field: field, Language: language, Value: value})
 	}
 
 	return translations, nil
 }
 
-func (s *server) saveParameterTranslations(ctx context.Context, parameterId string, tcr translationModificationRequest) error {
-	tx, err := s.db.BeginTx(ctx, nil)
+func (pr *psqlParameterRepository) SaveTranslations(ctx context.Context, parameterId string, tcr domain.TranslationModificationRequest) error {
+	tx, err := pr.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
