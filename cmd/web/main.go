@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/gossie/modelling-service/server"
+	modelling "github.com/gossie/modelling-service"
 	_ "github.com/lib/pq"
 )
 
@@ -62,7 +62,7 @@ func main() {
 	db := connectToDB()
 	defer db.Close()
 
-	svr := server.NewServer(db, jwtSecrect)
+	svr := modelling.NewServer(db, jwtSecrect)
 
 	slog.Info("starting server on port " + port)
 	log.Fatal(http.ListenAndServe(":"+port, svr))
