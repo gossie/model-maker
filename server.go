@@ -5,14 +5,15 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/gossie/modelling-service/domain"
 	"github.com/gossie/modelling-service/middleware"
 	"github.com/gossie/modelling-service/persistence"
 )
 
 type server struct {
 	db                  *sql.DB
-	modelRepository     persistence.ModelRepository
-	parameterRepository persistence.ParameterRepository
+	modelRepository     domain.ModelRepository
+	parameterRepository domain.ParameterRepository
 	jwtSecrect          string
 }
 
@@ -43,7 +44,8 @@ func (s *server) routes() {
 	http.HandleFunc("GET /models/{modelId}/parameters", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.getParameters))))
 	http.HandleFunc("DELETE /models/{modelId}/parameters/{parameterId}", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.deleteParameter))))
 	http.HandleFunc("GET /models/{modelId}/parameters/{parameterId}/translations", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.getParameterTranslations))))
-	http.HandleFunc("PUT /models/{modelId}/parameters/{parameterId}/translations", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.putParameterTranslations))))
+	http.HandleFunc("PATCH /models/{modelId}/parameters/{parameterId}/translations", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.patchParameterTranslations))))
+	http.HandleFunc("PATCH /models/{modelId}/parameters/{parameterId}/values", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.patchParameterValues))))
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {

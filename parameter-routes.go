@@ -92,20 +92,43 @@ func (s *server) getParameterTranslations(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (s *server) putParameterTranslations(w http.ResponseWriter, r *http.Request) {
+func (s *server) patchParameterTranslations(w http.ResponseWriter, r *http.Request) {
 	modelId, parameterId := r.PathValue("modelId"), r.PathValue("parameterId")
 	slog.InfoContext(r.Context(), fmt.Sprintf("saving parameter translations - modelId: %v, parameterId: %v", modelId, parameterId))
 
 	decoder := json.NewDecoder(r.Body)
-	var tcr domain.TranslationModificationRequest
-	err := decoder.Decode(&tcr)
+	var tmr domain.TranslationModificationRequest
+	err := decoder.Decode(&tmr)
 	if err != nil {
 		slog.WarnContext(r.Context(), fmt.Sprintf("could not decode json: %v", err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	err = s.parameterRepository.SaveTranslations(r.Context(), parameterId, tcr)
+	err = s.parameterRepository.SaveTranslations(r.Context(), parameterId, tmr)
+	if err != nil {
+		slog.WarnContext(r.Context(), fmt.Sprintf("could not save translations: %v", err.Error()))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(200)
+}
+
+func (s *server) patchParameterValues(w http.ResponseWriter, r *http.Request) {
+	modelId, parameterId := r.PathValue("modelId"), r.PathValue("parameterId")
+	slog.InfoContext(r.Context(), fmt.Sprintf("saving parameter values - modelId: %v, parameterId: %v", modelId, parameterId))
+
+	decoder := json.NewDecoder(r.Body)
+	var vmr domain.ValueModificationRequest
+	err := decoder.Decode(&vmr)
+	if err != nil {
+		slog.WarnContext(r.Context(), fmt.Sprintf("could not decode json: %v", err.Error()))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = s.parameterRepository.SaveValues(r.Context(), parameterId, vmr)
 	if err != nil {
 		slog.WarnContext(r.Context(), fmt.Sprintf("could not save translations: %v", err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)

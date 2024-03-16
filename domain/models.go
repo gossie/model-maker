@@ -22,11 +22,22 @@ type Parameter struct {
 	Name        string                 `json:"name"`
 	Translation string                 `json:"translation"`
 	ValueType   configurator.ValueType `json:"valueType"`
-	Value       Value                  `json:"value"`
+	Value       ParameterValue         `json:"value"`
+}
+
+type ParameterValue struct {
+	Values []Value `json:"values"`
 }
 
 type Value struct {
-	Values []string `json:"values"`
+	Id          int    `json:"id"`
+	Value       string `json:"value"`
+	Translation string `json:"translation"`
+}
+
+type ValueModificationRequest struct {
+	NewValues     []string `json:"newValues"`
+	UpdatedValues []Value  `json:"updatedValues"`
 }
 
 type TranslationModificationRequest struct {
