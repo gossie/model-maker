@@ -21,7 +21,7 @@ func NewPsqlParameterRepository(db *sql.DB) psqlParameterRepository {
 
 func (pr *psqlParameterRepository) FindAllByModelId(ctx context.Context, modelId string) ([]domain.Parameter, error) {
 	sqlStatement := `
-		SELECT p.id, p.name, p.valueType, pt.translation, v.value, vt.translation
+		SELECT p.id, p.name, p.valueType, pt.translation, v.id, v.value, vt.translation
 		FROM parameters p
 		LEFT JOIN parameter_translations pt
 		ON p.id = pt.parameterId
@@ -45,9 +45,10 @@ func (pr *psqlParameterRepository) FindAllByModelId(ctx context.Context, modelId
 		var name string
 		var valueType configurator.ValueType
 		var paramTranslation sql.NullString
+		var valueId sql.NullInt32
 		var paramValue sql.NullString
 		var valueTranslation sql.NullString
-		err = rows.Scan(&id, &name, &valueType, &paramTranslation, &paramValue, &valueTranslation)
+		err = rows.Scan(&id, &name, &valueType, &paramTranslation, &valueId, &paramValue, &valueTranslation)
 		if err != nil {
 			return nil, err
 		}
@@ -66,8 +67,8 @@ func (pr *psqlParameterRepository) FindAllByModelId(ctx context.Context, modelId
 			lastIndex++
 		}
 
-		if paramValue.Valid {
-			parameters[lastIndex].Value.Values = append(parameters[lastIndex].Value.Values, domain.Value{Value: paramValue.String, Translation: valueTranslation.String})
+		if valueId.Valid {
+			parameters[lastIndex].Value.Values = append(parameters[lastIndex].Value.Values, domain.Value{Id: int(valueId.Int32), Value: paramValue.String, Translation: valueTranslation.String})
 		}
 	}
 
@@ -127,8 +128,8 @@ func (pr *psqlParameterRepository) SaveTranslations(ctx context.Context, paramet
 		}
 
 		sqlStatement := `
-		INSERT INTO parameter_translations (parameterId, field, language, translation)
-		VALUES ` + strings.Join(valueStrings, ", ")
+			INSERT INTO parameter_translations (parameterId, field, language, translation)
+			VALUES ` + strings.Join(valueStrings, ", ")
 		_, err = tx.ExecContext(ctx, sqlStatement, args...)
 		if err != nil {
 			tx.Rollback()

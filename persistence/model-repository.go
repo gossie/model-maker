@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/gossie/configurator"
 	"github.com/gossie/modelling-service/domain"
 	"github.com/gossie/modelling-service/middleware"
 )
@@ -20,18 +21,47 @@ func NewPsqlModelRepository(db *sql.DB) psqlModelRepository {
 
 func (mr *psqlModelRepository) FindById(ctx context.Context, modelId string) (domain.Model, error) {
 	sqlStatement := `
-		SELECT m.id, m.name, t.translation FROM models m
-		JOIN model_translations t
+		SELECT m.id, m.name, t.translation, c.id, c.constraintType, c.fromId, c.fromValueId, c.targetId, c.targetValueId FROM models m
+		LEFT JOIN model_translations t
 		ON m.id = t.modelId
+		LEFT JOIN constraints c
+		ON c.modelId = m.id
 		WHERE m.id = $1 AND t.language = $2
 	`
+	rows, err := mr.db.QueryContext(ctx, sqlStatement, modelId, ctx.Value(middleware.LanguageKey))
+	if err != nil {
+		slog.WarnContext(ctx, "got an error"+err.Error())
+		return domain.Model{}, err
+	}
+	defer rows.Close()
+
 	var id int
 	var name string
 	var translation sql.NullString
-	row := mr.db.QueryRowContext(ctx, sqlStatement, modelId, ctx.Value(middleware.LanguageKey))
-	err := row.Scan(&id, &name, &translation)
+	constraints := make([]domain.Constraint, 0)
+	for rows.Next() {
+		var constraintId sql.NullInt32
+		var contraintType sql.NullInt32
+		var fromId sql.NullInt32
+		var fromValueId sql.NullInt32
+		var targetId sql.NullInt32
+		var targetValueId sql.NullInt32
 
-	return domain.Model{Id: id, Name: name, Translation: translation.String}, err
+		rows.Scan(&id, &name, &translation, &constraintId, &contraintType, &fromId, &fromValueId, &targetId, &targetValueId)
+
+		if constraintId.Valid {
+			constraints = append(constraints, domain.Constraint{
+				Id:            int(constraintId.Int32),
+				Type:          configurator.ConstraintType(contraintType.Int32),
+				FromId:        int(fromId.Int32),
+				FromValueId:   int(fromValueId.Int32),
+				TargetId:      int(targetId.Int32),
+				TargetValueId: int(targetValueId.Int32),
+			})
+		}
+	}
+
+	return domain.Model{Id: id, Name: name, Translation: translation.String, Constraints: constraints}, rows.Err()
 }
 
 func (mr *psqlModelRepository) FindAllByUser(ctx context.Context, userEmail string) ([]domain.Model, error) {
@@ -55,7 +85,7 @@ func (mr *psqlModelRepository) FindAllByUser(ctx context.Context, userEmail stri
 		var name string
 		var translation sql.NullString
 		rows.Scan(&id, &name, &translation)
-		models = append(models, domain.Model{Id: id, Name: name, Translation: translation.String})
+		models = append(models, domain.Model{Id: id, Name: name, Translation: translation.String, Constraints: make([]domain.Constraint, 0)})
 	}
 
 	return models, rows.Err()
