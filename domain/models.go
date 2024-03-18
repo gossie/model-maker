@@ -7,9 +7,31 @@ type ModelCreationRequest struct {
 }
 
 type Model struct {
-	Id          int    `json:"id"`
-	Name        string `json:"name"`
-	Translation string `json:"translation"`
+	Id          int          `json:"id"`
+	Name        string       `json:"name"`
+	Translation string       `json:"translation"`
+	Constraints []Constraint `json:"constraints"`
+}
+
+type ConstraintCreationRequest struct {
+	Type          configurator.ConstraintType `json:"type"`
+	FromId        int                         `json:"fromId"`
+	FromValueId   int                         `json:"fromValueId"`
+	TargetId      int                         `json:"targetId"`
+	TargetValueId int                         `json:"targetValueId"`
+}
+
+type ConstraintCreationResponse struct {
+	Id int `json:"id"`
+}
+
+type Constraint struct {
+	Id            int                         `json:"id"`
+	Type          configurator.ConstraintType `json:"type"`
+	FromId        int                         `json:"fromId"`
+	FromValueId   int                         `json:"fromValueId"`
+	TargetId      int                         `json:"targetId"`
+	TargetValueId int                         `json:"targetValueId"`
 }
 
 type ParameterCreationRequest struct {

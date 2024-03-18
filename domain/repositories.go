@@ -18,3 +18,8 @@ type ParameterRepository interface {
 	SaveTranslations(context.Context, string, TranslationModificationRequest) error
 	SaveValues(context.Context, string, ValueModificationRequest) error
 }
+
+type ConstraintRepository interface {
+	SaveConstraint(context.Context, string, ConstraintCreationRequest) (int, error)
+	DeleteConstraint(context.Context, string, string) error
+}

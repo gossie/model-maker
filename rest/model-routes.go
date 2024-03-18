@@ -1,4 +1,4 @@
-package modellingservice
+package rest
 
 import (
 	"database/sql"
@@ -23,7 +23,7 @@ func (s *server) login(secret string) http.HandlerFunc {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 
-		slog.InfoContext(r.Context(), fmt.Sprintf("trying to login %v", info.Email))
+		slog.InfoContext(r.Context(), fmt.Sprintf("loging in %v", info.Email))
 		// check username & password
 
 		var userId int
@@ -98,7 +98,7 @@ func (s *server) postModel(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) getModels(w http.ResponseWriter, r *http.Request) {
-	slog.InfoContext(r.Context(), "trying to retrieve models")
+	slog.InfoContext(r.Context(), "retrieving models")
 
 	email := r.Context().Value(middleware.UserIdentifierKey).(string)
 
@@ -123,7 +123,7 @@ func (s *server) getModel(w http.ResponseWriter, r *http.Request) {
 
 	response, err := s.modelRepository.FindById(r.Context(), modelId)
 	if err != nil {
-		slog.InfoContext(r.Context(), fmt.Sprintf("could not find model with id %v", modelId))
+		slog.WarnContext(r.Context(), fmt.Sprintf("could not find model with id %v", modelId))
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
