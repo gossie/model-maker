@@ -1,4 +1,4 @@
-package modellingservice
+package rest
 
 type loginInfo struct {
 	Email    string `json:"email"`

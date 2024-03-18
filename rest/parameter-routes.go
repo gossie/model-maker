@@ -1,4 +1,4 @@
-package modellingservice
+package rest
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 )
 
 func (s *server) getParameters(w http.ResponseWriter, r *http.Request) {
-	slog.InfoContext(r.Context(), "trying to retrieve models")
+	slog.InfoContext(r.Context(), "retrieving parameters")
 
 	modelId := r.PathValue("modelId")
 

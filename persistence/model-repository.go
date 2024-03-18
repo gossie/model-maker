@@ -22,14 +22,15 @@ func NewPsqlModelRepository(db *sql.DB) psqlModelRepository {
 func (mr *psqlModelRepository) FindById(ctx context.Context, modelId string) (domain.Model, error) {
 	sqlStatement := `
 		SELECT m.id, m.name, t.translation, c.id, c.constraintType, c.fromId, c.fromValueId, c.targetId, c.targetValueId FROM models m
-		JOIN model_translations t
+		LEFT JOIN model_translations t
 		ON m.id = t.modelId
-		JOIN constraints c
+		LEFT JOIN constraints c
 		ON c.modelId = m.id
 		WHERE m.id = $1 AND t.language = $2
 	`
 	rows, err := mr.db.QueryContext(ctx, sqlStatement, modelId, ctx.Value(middleware.LanguageKey))
 	if err != nil {
+		slog.WarnContext(ctx, "got an error"+err.Error())
 		return domain.Model{}, err
 	}
 	defer rows.Close()

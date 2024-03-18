@@ -128,8 +128,8 @@ func (pr *psqlParameterRepository) SaveTranslations(ctx context.Context, paramet
 		}
 
 		sqlStatement := `
-		INSERT INTO parameter_translations (parameterId, field, language, translation)
-		VALUES ` + strings.Join(valueStrings, ", ")
+			INSERT INTO parameter_translations (parameterId, field, language, translation)
+			VALUES ` + strings.Join(valueStrings, ", ")
 		_, err = tx.ExecContext(ctx, sqlStatement, args...)
 		if err != nil {
 			tx.Rollback()

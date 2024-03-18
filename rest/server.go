@@ -1,4 +1,4 @@
-package modellingservice
+package rest
 
 import (
 	"database/sql"
@@ -11,19 +11,22 @@ import (
 )
 
 type server struct {
-	db                  *sql.DB
-	modelRepository     domain.ModelRepository
-	parameterRepository domain.ParameterRepository
-	jwtSecrect          string
+	db                   *sql.DB
+	modelRepository      domain.ModelRepository
+	constraintRepository domain.ConstraintRepository
+	parameterRepository  domain.ParameterRepository
+	jwtSecrect           string
 }
 
 func NewServer(db *sql.DB, jwtSecrect string) *server {
 	modelRepo := persistence.NewPsqlModelRepository(db)
 	paramRepo := persistence.NewPsqlParameterRepository(db)
+	constRepo := persistence.NewPsqlConstraintRepository(db)
 
 	s := server{
 		db,
 		&modelRepo,
+		&constRepo,
 		&paramRepo,
 		jwtSecrect,
 	}
@@ -40,6 +43,8 @@ func (s *server) routes() {
 	http.HandleFunc("POST /models", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, s.postModel)))
 	http.HandleFunc("GET /models", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, s.getModels)))
 	http.HandleFunc("GET /models/{modelId}", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.getModel))))
+	http.HandleFunc("POST /models/{modelId}/constraints", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.postConstraint))))
+	http.HandleFunc("DELETE /models/{modelId}/constraints/{constraintId}", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.deleteConstraint))))
 	http.HandleFunc("POST /models/{modelId}/parameters", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.postParameter))))
 	http.HandleFunc("GET /models/{modelId}/parameters", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.getParameters))))
 	http.HandleFunc("DELETE /models/{modelId}/parameters/{parameterId}", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.deleteParameter))))
