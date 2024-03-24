@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gossie/configurator"
+	configurationmodel "github.com/gossie/configuration-model"
 	"github.com/gossie/modelling-service/domain"
 	"github.com/gossie/modelling-service/middleware"
 )
@@ -43,7 +43,7 @@ func (pr *psqlParameterRepository) FindAllByModelId(ctx context.Context, modelId
 	for rows.Next() {
 		var id int
 		var name string
-		var valueType configurator.ValueType
+		var valueType configurationmodel.ValueType
 		var paramTranslation sql.NullString
 		var valueId sql.NullInt32
 		var paramValue sql.NullString

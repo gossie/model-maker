@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/gossie/configurator"
+	configurationmodel "github.com/gossie/configuration-model"
 	"github.com/gossie/modelling-service/domain"
 	"github.com/gossie/modelling-service/middleware"
 )
@@ -52,7 +52,7 @@ func (mr *psqlModelRepository) FindById(ctx context.Context, modelId string) (do
 		if constraintId.Valid {
 			constraints = append(constraints, domain.Constraint{
 				Id:            int(constraintId.Int32),
-				Type:          configurator.ConstraintType(contraintType.Int32),
+				Type:          configurationmodel.ConstraintType(contraintType.Int32),
 				FromId:        int(fromId.Int32),
 				FromValueId:   int(fromValueId.Int32),
 				TargetId:      int(targetId.Int32),

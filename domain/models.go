@@ -1,6 +1,8 @@
 package domain
 
-import "github.com/gossie/configurator"
+import (
+	configurationmodel "github.com/gossie/configuration-model"
+)
 
 type ModelCreationRequest struct {
 	Name string `json:"name"`
@@ -14,11 +16,11 @@ type Model struct {
 }
 
 type ConstraintCreationRequest struct {
-	Type          configurator.ConstraintType `json:"type"`
-	FromId        int                         `json:"fromId"`
-	FromValueId   int                         `json:"fromValueId"`
-	TargetId      int                         `json:"targetId"`
-	TargetValueId int                         `json:"targetValueId"`
+	Type          configurationmodel.ConstraintType `json:"type"`
+	FromId        int                               `json:"fromId"`
+	FromValueId   int                               `json:"fromValueId"`
+	TargetId      int                               `json:"targetId"`
+	TargetValueId int                               `json:"targetValueId"`
 }
 
 type ConstraintCreationResponse struct {
@@ -26,25 +28,25 @@ type ConstraintCreationResponse struct {
 }
 
 type Constraint struct {
-	Id            int                         `json:"id"`
-	Type          configurator.ConstraintType `json:"type"`
-	FromId        int                         `json:"fromId"`
-	FromValueId   int                         `json:"fromValueId"`
-	TargetId      int                         `json:"targetId"`
-	TargetValueId int                         `json:"targetValueId"`
+	Id            int                               `json:"id"`
+	Type          configurationmodel.ConstraintType `json:"type"`
+	FromId        int                               `json:"fromId"`
+	FromValueId   int                               `json:"fromValueId"`
+	TargetId      int                               `json:"targetId"`
+	TargetValueId int                               `json:"targetValueId"`
 }
 
 type ParameterCreationRequest struct {
-	Name      string                 `json:"name"`
-	ValueType configurator.ValueType `json:"valueType"`
+	Name      string                       `json:"name"`
+	ValueType configurationmodel.ValueType `json:"valueType"`
 }
 
 type Parameter struct {
-	Id          int                    `json:"id"`
-	Name        string                 `json:"name"`
-	Translation string                 `json:"translation"`
-	ValueType   configurator.ValueType `json:"valueType"`
-	Value       ParameterValue         `json:"value"`
+	Id          int                          `json:"id"`
+	Name        string                       `json:"name"`
+	Translation string                       `json:"translation"`
+	ValueType   configurationmodel.ValueType `json:"valueType"`
+	Value       ParameterValue               `json:"value"`
 }
 
 type ParameterValue struct {

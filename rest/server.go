@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	configurationmodel "github.com/gossie/configuration-model"
 	"github.com/gossie/modelling-service/domain"
 	"github.com/gossie/modelling-service/middleware"
 	"github.com/gossie/modelling-service/persistence"
@@ -51,6 +52,21 @@ func (s *server) routes() {
 	http.HandleFunc("GET /models/{modelId}/parameters/{parameterId}/translations", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.getParameterTranslations))))
 	http.HandleFunc("PATCH /models/{modelId}/parameters/{parameterId}/translations", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.patchParameterTranslations))))
 	http.HandleFunc("PATCH /models/{modelId}/parameters/{parameterId}/values", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.patchParameterValues))))
+
+	http.HandleFunc("GET /configuration-models/{modelId}", func(w http.ResponseWriter, r *http.Request) {
+		confModel := configurationmodel.Model{}
+
+		_, _ = s.modelRepository.FindById(r.Context(), r.PathValue("modelId"))
+		parameters, _ := s.parameterRepository.FindAllByModelId(r.Context(), r.PathValue("modelId"))
+
+		for _, p := range parameters {
+			var value configurationmodel.ValueModel
+			confModel.AddParameter(p.Name, value)
+		}
+
+		// encoder := json.NewEncoder(w)
+		// err = encoder.Encode(confModel)
+	})
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
