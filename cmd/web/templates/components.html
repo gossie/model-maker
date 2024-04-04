@@ -1,0 +1,28 @@
+{{define "input-field"}}
+    <div>
+        <label for="{{ .Name }}">{{ .Label }}</label>
+        <input
+            name="{{ .Name }}"
+            type="{{ .Type }}"
+            placeholder="{{ .Placeholder }}"
+            class="border border-solid border-gray-400 rounded p-1"
+        />
+    </div>
+{{end}}
+
+{{define "select-box"}}
+    <div>
+        <label for="{{ .Name }}">{{ .Label }}</label>
+        <select name="{{ .Name }}" class="border border-solid border-gray-400 rounded p-1">
+            {{range .Options}}
+                <option value="{{.Key}}">{{ .Value }}</option>
+            {{end}}
+        </select>
+    </div>
+{{end}}
+
+{{define "primary-button"}}
+    <button type="submit" class="border rounded p-1 bg-emerald-500 active:bg-emerald-400 hover:bg-emerald-300">
+        {{ .Label }}
+    </button>
+{{end}}

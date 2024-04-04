@@ -2,16 +2,16 @@ package rest
 
 import (
 	"database/sql"
-	"log/slog"
+	"html/template"
 	"net/http"
 
-	configurationmodel "github.com/gossie/configuration-model"
 	"github.com/gossie/modelling-service/domain"
 	"github.com/gossie/modelling-service/middleware"
 	"github.com/gossie/modelling-service/persistence"
 )
 
 type server struct {
+	tmpl                 *template.Template
 	db                   *sql.DB
 	modelRepository      domain.ModelRepository
 	constraintRepository domain.ConstraintRepository
@@ -19,12 +19,13 @@ type server struct {
 	jwtSecrect           string
 }
 
-func NewServer(db *sql.DB, jwtSecrect string) *server {
+func NewServer(tmpl *template.Template, db *sql.DB, jwtSecrect string) *server {
 	modelRepo := persistence.NewPsqlModelRepository(db)
 	paramRepo := persistence.NewPsqlParameterRepository(db)
 	constRepo := persistence.NewPsqlConstraintRepository(db)
 
 	s := server{
+		tmpl,
 		db,
 		&modelRepo,
 		&constRepo,
@@ -36,10 +37,7 @@ func NewServer(db *sql.DB, jwtSecrect string) *server {
 }
 
 func (s *server) routes() {
-	http.HandleFunc("OPTIONS /", middleware.Any(func(w http.ResponseWriter, r *http.Request) {
-		slog.InfoContext(r.Context(), "handling options request")
-		w.WriteHeader(http.StatusNoContent)
-	}))
+	http.HandleFunc("GET /", middleware.Any(s.getIndex))
 	http.HandleFunc("POST /login", middleware.Any(s.login(s.jwtSecrect)))
 	http.HandleFunc("POST /models", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, s.postModel)))
 	http.HandleFunc("GET /models", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, s.getModels)))
@@ -53,20 +51,20 @@ func (s *server) routes() {
 	http.HandleFunc("PATCH /models/{modelId}/parameters/{parameterId}/translations", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.patchParameterTranslations))))
 	http.HandleFunc("PATCH /models/{modelId}/parameters/{parameterId}/values", middleware.Any(middleware.AuthenticatedRequest(s.jwtSecrect, middleware.Authorized(s.db, s.patchParameterValues))))
 
-	http.HandleFunc("GET /configuration-models/{modelId}", func(w http.ResponseWriter, r *http.Request) {
-		confModel := configurationmodel.Model{}
+	// http.HandleFunc("GET /configuration-models/{modelId}", func(w http.ResponseWriter, r *http.Request) {
+	// 	confModel := configurationmodel.Model{}
 
-		_, _ = s.modelRepository.FindById(r.Context(), r.PathValue("modelId"))
-		parameters, _ := s.parameterRepository.FindAllByModelId(r.Context(), r.PathValue("modelId"))
+	// 	_, _ = s.modelRepository.FindById(r.Context(), r.PathValue("modelId"))
+	// 	parameters, _ := s.parameterRepository.FindAllByModelId(r.Context(), r.PathValue("modelId"))
 
-		for _, p := range parameters {
-			var value configurationmodel.ValueModel
-			confModel.AddParameter(p.Name, value)
-		}
+	// 	for _, p := range parameters {
+	// 		var value configurationmodel.ValueModel
+	// 		confModel.AddParameter(p.Name, value)
+	// 	}
 
-		// encoder := json.NewEncoder(w)
-		// err = encoder.Encode(confModel)
-	})
+	// 	// encoder := json.NewEncoder(w)
+	// 	// err = encoder.Encode(confModel)
+	// })
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {

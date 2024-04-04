@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="de">
+    <head>
+        <title>Model-Maker</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta charset="UTF-8">
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://unpkg.com/htmx.org@1.9.11" integrity="sha384-0gxUXCCR8yv9FM2b+U3FDbsKthCI66oH5IA9fHppQq9DDMHuMauqq1ZHBpJxQ0J0" crossorigin="anonymous"></script>
+    </head>
+    <body>
+        <div id="app" class="m-10">
+            <header>
+                <div>
+                    Modelsprache
+                    <select class="border border-solid border-gray-400 rounded p-1">
+                        <option value="de">Deutsch</option>
+                        <option value="en">Englisch</option>
+                    </select>
+                </div>
+            </header>
+            <main>
+                <h1 class="text-2xl font-bold">{{ .Model.Name }}</h1>
+                <div>
+                    <form hx-post="/models/{{ .Model.Id }}/parameters" hx-target="#parameters">
+                        {{ template "input-field" (inputField "Neuer Parameter" "parameterName" "text" "") }}
+                        {{ template "select-box" (selectBox "Werte-Typ" "valueType" (options "3" "Liste von Texten" "0" "Liste von Zahlen")) }}
+                        {{ template "primary-button" (primaryButton "Parameter erstellen") }}
+                    </form>
+                </div>
+                <div class="flex flex-row gap-5">
+                    <div id="parameters">
+                        {{ block "parameter-list" .Parameters }}
+                            <table class="w-96">
+                                <thead class="border border-solid">
+                                    <tr>
+                                        <th class="font-bold p-2 text-left">Name</th>
+                                        <th class="font-bold p-2 text-left">Wert</th>
+                                        <th class="font-bold p-2 text-left">Regeln filtern</th>
+                                        <th></th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                {{ range . }}
+                                    <tbody class="border border-solid">
+                                        <tr>
+                                            <td class="p-2">{{ .Name }}</td>
+                                            <td class="p-2">
+                                                {{if not .Values }}
+                                                    <div title="Der Parameter hat noch keinen Wert">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14" />
+                                                        </svg>
+                                                    </div>
+                                                {{else}}
+                                                    <div>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5" />
+                                                        </svg>
+                                                    </div>
+                                                {{end}}
+                                            </td>
+                                            <td class="text-center">
+                                                Hier muss die Filterbox hin
+                                            </td>
+                                            <td class="p-2">
+                                                <!-- <ChevronUpIcon v-if="param.id === openId" class="h-5 w-5 cursor-pointer hover:bg-emerald-300 rounded" @click="close" />
+                                                <ChevronDownIcon v-else class="h-5 w-5 cursor-pointer hover:bg-emerald-300 rounded" @click="() => open(param.id)" /> -->
+                                            </td>
+                                            <td class="p-2">
+                                                <div title="Löschen" hx-delete="/models/{{ .ModelId }}/parameters/{{ .Id }}" hx-target="#parameters">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 cursor-pointer hover:bg-emerald-300 rounded" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                    </svg>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                {{ end }}
+                            </table>
+                        {{ end }}
+                    </div>
+                    <div id="constraints">
+                        {{ block "constraint-list" .Constraints }}
+                            <div class="border border-solid p-2">
+                                <ul>
+                                    {{ range . }}
+                                        <li>Hier kommt ein Constraint hin</li>
+                                    {{ end }}
+                                </ul>
+                            </div>
+                        {{ end }}
+                    </div>
+                </div>
+            </main>
+        </div>
+    </body>
+</html>

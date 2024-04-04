@@ -19,7 +19,7 @@ func NewPsqlModelRepository(db *sql.DB) psqlModelRepository {
 	return psqlModelRepository{db: db}
 }
 
-func (mr *psqlModelRepository) FindById(ctx context.Context, modelId string) (domain.Model, error) {
+func (mr *psqlModelRepository) FindById(ctx context.Context, modelId int) (domain.Model, error) {
 	sqlStatement := `
 		SELECT m.id, m.name, t.translation, c.id, c.constraintType, c.fromId, c.fromValueId, c.targetId, c.targetValueId FROM models m
 		LEFT JOIN model_translations t
@@ -65,15 +65,20 @@ func (mr *psqlModelRepository) FindById(ctx context.Context, modelId string) (do
 }
 
 func (mr *psqlModelRepository) FindAllByUser(ctx context.Context, userEmail string) ([]domain.Model, error) {
+	language := ctx.Value(middleware.LanguageKey)
+
+	slog.InfoContext(ctx, fmt.Sprintf("retrieving models for user %v and language %v", userEmail, language))
+
 	sqlStatement := `
 		SELECT m.id, m.name, t.translation
 		FROM models m
-		JOIN model_user_relations mur
+		LEFT JOIN model_user_relations mur
 		ON m.id = mur.modelid
-		JOIN model_translations t ON m.id = t.modelId
-		WHERE mur.userid = (SELECT id FROM users WHERE email = $1) AND t.language = $2;
+		LEFT JOIN model_translations t
+		ON m.id = t.modelId
+		WHERE mur.userid = (SELECT id FROM users WHERE email = $1) AND (t.language = $2 OR t.language IS NULL)
 	`
-	rows, err := mr.db.QueryContext(ctx, sqlStatement, userEmail, ctx.Value(middleware.LanguageKey))
+	rows, err := mr.db.QueryContext(ctx, sqlStatement, userEmail, language)
 	if err != nil {
 		return nil, err
 	}

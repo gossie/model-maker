@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -15,8 +14,13 @@ const UserIdentifierKey = userIdentifier("userIdentifier")
 
 func AuthenticatedRequest(secret string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tokenStr, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-		token := verifyToken(tokenStr, secret)
+		cookie, err := r.Cookie("accessToken")
+		if err != nil {
+			slog.InfoContext(r.Context(), "no access token")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		token := verifyToken(cookie.Value, secret)
 		if token == nil || !token.Valid {
 			slog.InfoContext(r.Context(), "token is not valid")
 			w.WriteHeader(http.StatusUnauthorized)

@@ -13,9 +13,7 @@ func Any(next http.HandlerFunc) http.HandlerFunc {
 	return traceRequest(
 		profile(
 			logIncomingRequests(
-				withLanguage(
-					addContentType("application/json",
-						enableCors(next))))))
+				withLanguage(next))))
 }
 
 func withLanguage(next http.HandlerFunc) http.HandlerFunc {

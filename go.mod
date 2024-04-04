@@ -8,4 +8,7 @@ require (
 	github.com/lib/pq v1.10.9
 )
 
-require github.com/gossie/configuration-model v0.0.7
+require (
+	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/gossie/configuration-model v0.0.7
+)

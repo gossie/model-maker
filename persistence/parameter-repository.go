@@ -19,7 +19,7 @@ func NewPsqlParameterRepository(db *sql.DB) psqlParameterRepository {
 	return psqlParameterRepository{db: db}
 }
 
-func (pr *psqlParameterRepository) FindAllByModelId(ctx context.Context, modelId string) ([]domain.Parameter, error) {
+func (pr *psqlParameterRepository) FindAllByModelId(ctx context.Context, modelId int) ([]domain.Parameter, error) {
 	sqlStatement := `
 		SELECT p.id, p.name, p.valueType, pt.translation, v.id, v.value, vt.translation
 		FROM parameters p
@@ -75,13 +75,13 @@ func (pr *psqlParameterRepository) FindAllByModelId(ctx context.Context, modelId
 	return parameters, nil
 }
 
-func (pr *psqlParameterRepository) SaveParameter(ctx context.Context, modelId string, pmr domain.ParameterCreationRequest) (int, error) {
+func (pr *psqlParameterRepository) SaveParameter(ctx context.Context, modelId int, pmr domain.ParameterCreationRequest) (int, error) {
 	var parameterId int
 	err := pr.db.QueryRowContext(ctx, "INSERT INTO parameters (name, valueType, modelId) VALUES ($1, $2, $3) RETURNING id", pmr.Name, pmr.ValueType, modelId).Scan(&parameterId)
 	return parameterId, err
 }
 
-func (pr *psqlParameterRepository) DeleteParameter(ctx context.Context, modelId string, parameterId string) error {
+func (pr *psqlParameterRepository) DeleteParameter(ctx context.Context, modelId int, parameterId int) error {
 	_, err := pr.db.ExecContext(ctx, "DELETE FROM parameters WHERE id = $1 AND modelId = $2", parameterId, modelId)
 	return err
 }

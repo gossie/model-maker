@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="de">
+    <head>
+        <title>Model-Maker</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta charset="UTF-8">
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body>
+        <div id="app" class="m-10">
+            <form action="/login" method="POST">
+                {{ template "input-field" (inputField "E-Mail" "email" "text" "your@email.de") }}
+                {{ template "input-field" (inputField "Passwort" "password" "password" "") }}
+                {{ template "primary-button" (primaryButton "Login") }}
+            </form>
+        </div>
+    </body>
+</html>
