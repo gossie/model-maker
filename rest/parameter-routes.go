@@ -16,19 +16,11 @@ func (s *server) getParameters(w http.ResponseWriter, r *http.Request) {
 
 	modelId, _ := strconv.Atoi(r.PathValue("modelId"))
 
-	models, err := s.parameterRepository.FindAllByModelId(r.Context(), modelId)
-	if err != nil {
-		slog.WarnContext(r.Context(), fmt.Sprintf("error retrieving parameters for model ID %v from database: %v", modelId, err.Error()))
-		http.Error(w, err.Error(), 500)
-		return
+	searchValue := r.URL.Query().Get("parameterName")
+	if searchValue == "" {
+		searchValue = "*"
 	}
-
-	err = json.NewEncoder(w).Encode(models)
-	if err != nil {
-		slog.WarnContext(r.Context(), fmt.Sprintf("could not encode json: %v", err.Error()))
-		http.Error(w, err.Error(), 500)
-		return
-	}
+	s.renderParameters(w, r, modelId, searchValue)
 }
 
 func (s *server) postParameter(w http.ResponseWriter, r *http.Request) {
@@ -49,7 +41,7 @@ func (s *server) postParameter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.renderParameters(w, r, modelId)
+	s.renderParameters(w, r, modelId, "")
 }
 
 func (s *server) deleteParameter(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +57,7 @@ func (s *server) deleteParameter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.renderParameters(w, r, modelId)
+	s.renderParameters(w, r, modelId, "")
 }
 
 func (s *server) getParameterTranslations(w http.ResponseWriter, r *http.Request) {

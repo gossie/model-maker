@@ -21,6 +21,14 @@ type InputField struct {
 	Placeholder string
 }
 
+type Autocomplete struct {
+	Label       string
+	Name        string
+	Type        string
+	Placeholder string
+	GetUrl      string
+}
+
 type Option struct {
 	Key, Value string
 }
@@ -52,8 +60,14 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 	"selectBox": func(label, name string, options []Option) SelectBox {
 		return SelectBox{Label: label, Name: name, Options: options}
 	},
+	"autocomplete": func(label, name, fieldType, placeholder, getUrl string) Autocomplete {
+		return Autocomplete{Label: label, Name: name, Type: fieldType, Placeholder: placeholder, GetUrl: getUrl}
+	},
 	"primaryButton": func(label string) PrimaryButton {
 		return PrimaryButton{Label: label}
+	},
+	"emptySlice": func() []string {
+		return []string{}
 	},
 }).ParseFS(htmlTemplates, "templates/*.html"))
 

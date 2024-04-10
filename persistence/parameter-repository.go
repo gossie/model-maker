@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	configurationmodel "github.com/gossie/configuration-model"
@@ -19,21 +20,55 @@ func NewPsqlParameterRepository(db *sql.DB) psqlParameterRepository {
 	return psqlParameterRepository{db: db}
 }
 
-func (pr *psqlParameterRepository) FindAllByModelId(ctx context.Context, modelId int) ([]domain.Parameter, error) {
-	sqlStatement := `
-		SELECT p.id, p.name, p.valueType, pt.translation, v.id, v.value, vt.translation
-		FROM parameters p
-		LEFT JOIN parameter_translations pt
-		ON p.id = pt.parameterId
-		LEFT JOIN values v
-		ON v.parameterId = p.id
-		LEFT JOIN value_translations vt
-		ON vt.valueId = v.id
-		WHERE p.modelId = $1 AND (pt.language = $2 OR pt.language IS NULL) AND (vt.language = $2 OR vt.language IS NULL)
-		ORDER BY p.id
-	`
+func (pr *psqlParameterRepository) FindAllByModelId(ctx context.Context, modelId int, searchValue string) ([]domain.Parameter, error) {
+	if searchValue == "*" {
+		searchValue = ""
+	}
 
-	rows, err := pr.db.QueryContext(ctx, sqlStatement, modelId, ctx.Value(middleware.LanguageKey))
+	var (
+		rows *sql.Rows
+		err  error
+	)
+
+	if searchValue == "" {
+		slog.InfoContext(ctx, fmt.Sprintf("retrieving all parameters of model with ID %v", modelId))
+
+		sqlStatement := `
+			SELECT p.id, p.name, p.valueType, pt.translation, v.id, v.value, vt.translation
+			FROM parameters p
+			LEFT JOIN parameter_translations pt
+			ON p.id = pt.parameterId
+			LEFT JOIN values v
+			ON v.parameterId = p.id
+			LEFT JOIN value_translations vt
+			ON vt.valueId = v.id
+			WHERE p.modelId = $1
+			AND (pt.language = $2 OR pt.language IS NULL)
+			AND (vt.language = $2 OR vt.language IS NULL)
+			ORDER BY p.id
+		`
+		rows, err = pr.db.QueryContext(ctx, sqlStatement, modelId, ctx.Value(middleware.LanguageKey))
+	} else {
+		slog.InfoContext(ctx, fmt.Sprintf("searching for parameters containing '%v' at model with ID %v", searchValue, modelId))
+
+		sqlStatement := `
+			SELECT p.id, p.name, p.valueType, pt.translation, v.id, v.value, vt.translation
+			FROM parameters p
+			LEFT JOIN parameter_translations pt
+			ON p.id = pt.parameterId
+			LEFT JOIN values v
+			ON v.parameterId = p.id
+			LEFT JOIN value_translations vt
+			ON vt.valueId = v.id
+			WHERE p.modelId = $1
+			AND (pt.language = $2 OR pt.language IS NULL)
+			AND (vt.language = $2 OR vt.language IS NULL)
+			AND (p.name LIKE '%' || $3 || '%' OR pt.translation LIKE '%' || $3 || '%')
+			ORDER BY p.id
+		`
+		rows, err = pr.db.QueryContext(ctx, sqlStatement, modelId, ctx.Value(middleware.LanguageKey), searchValue)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -170,8 +205,8 @@ func (pr *psqlParameterRepository) SaveValues(ctx context.Context, parameterId s
 		}
 
 		sqlStatement := `
-		INSERT INTO values (value, parameterId)
-		VALUES ` + strings.Join(valueStrings, ", ")
+			INSERT INTO values (value, parameterId)
+			VALUES ` + strings.Join(valueStrings, ", ")
 		_, err = tx.ExecContext(ctx, sqlStatement, args...)
 		if err != nil {
 			tx.Rollback()

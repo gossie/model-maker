@@ -79,16 +79,29 @@
                             </table>
                         {{ end }}
                     </div>
-                    <div id="constraints">
-                        {{ block "constraint-list" .Constraints }}
-                            <div class="border border-solid p-2">
+                    <div>
+                        <h2 class="text-xl font-bold">Constraints</h2>
+                        <div class="flex flex-col gap-3">
+                            <div>
+                                {{ template "select-box" (selectBox "Regeltyp" "constraintType" (options "0" "setValueIfFinal" "1" "setValueIfValue" "2" "excludeValueIfValue")) }}
+                                <div class="flex gap-1">
+                                    {{ template "autocomplete" (autocomplete  "" "parameterName" "text" "Parameter (von)" (printf "/models/%v/parameters" .Model.Id)) }}
+                                </div>
+                                <div class="flex gap-1">
+
+                                </div>
+                                {{ template "primary-button" (primaryButton "Constraint erstellen") }}
+                            </div>
+                        </div>
+                        <div id="constraints" class="border border-solid p-2">
+                            {{ block "constraint-list" .Constraints }}
                                 <ul>
                                     {{ range . }}
                                         <li>Hier kommt ein Constraint hin</li>
                                     {{ end }}
                                 </ul>
-                            </div>
-                        {{ end }}
+                            {{ end }}
+                        </div>
                     </div>
                 </div>
             </main>

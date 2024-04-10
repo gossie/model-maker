@@ -79,11 +79,11 @@ func (s *server) renderModel(w http.ResponseWriter, r *http.Request, modelId int
 	})
 
 	parameters, err := retrieveData(err, func() ([]domain.Parameter, error) {
-		return s.parameterRepository.FindAllByModelId(r.Context(), modelId)
+		return s.parameterRepository.FindAllByModelId(r.Context(), modelId, "")
 	})
 
 	if err != nil {
-		slog.WarnContext(r.Context(), fmt.Sprintf("could not find model with id %v", modelId))
+		slog.WarnContext(r.Context(), fmt.Sprintf("could not find model with id %v: %v", modelId, err.Error()))
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -108,20 +108,24 @@ func (s *server) renderModel(w http.ResponseWriter, r *http.Request, modelId int
 		constraintsToRender[i] = RenderConstraint{}
 	}
 
-	s.tmpl.ExecuteTemplate(w, "model.html", ModelRenderContext{
+	err = s.tmpl.ExecuteTemplate(w, "model.html", ModelRenderContext{
 		Model:       RenderModel{Id: model.Id, Name: valueOrDefault(model.Translation, model.Name)},
 		Parameters:  parametersToRender,
 		Constraints: constraintsToRender,
 	})
+
+	if err != nil {
+		slog.WarnContext(r.Context(), fmt.Sprintf("could not render template %v: %v", "model.html", err.Error()))
+	}
 }
 
-func (s *server) renderParameters(w http.ResponseWriter, r *http.Request, modelId int) {
+func (s *server) renderParameters(w http.ResponseWriter, r *http.Request, modelId int, searchValue string) {
 	parameters, err := retrieveData(nil, func() ([]domain.Parameter, error) {
-		return s.parameterRepository.FindAllByModelId(r.Context(), modelId)
+		return s.parameterRepository.FindAllByModelId(r.Context(), modelId, searchValue)
 	})
 
 	if err != nil {
-		slog.WarnContext(r.Context(), fmt.Sprintf("could not find model with id %v", modelId))
+		slog.WarnContext(r.Context(), fmt.Sprintf("could not find parameters for model with id %v: %v", modelId, err.Error()))
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -141,7 +145,18 @@ func (s *server) renderParameters(w http.ResponseWriter, r *http.Request, modelI
 		}
 	}
 
-	s.tmpl.ExecuteTemplate(w, "parameter-list", parametersToRender)
+	var templateName string
+	switch {
+	case searchValue != "":
+		templateName = "suggestion-list"
+	default:
+		templateName = "parameter-list"
+	}
+
+	err = s.tmpl.ExecuteTemplate(w, templateName, parametersToRender)
+	if err != nil {
+		slog.WarnContext(r.Context(), fmt.Sprintf("could not render template %v: %v", templateName, err.Error()))
+	}
 }
 
 func retrieveData[T any](err error, retriever func() (T, error)) (T, error) {

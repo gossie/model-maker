@@ -11,7 +11,7 @@ type ModelRepository interface {
 }
 
 type ParameterRepository interface {
-	FindAllByModelId(context.Context, int) ([]Parameter, error)
+	FindAllByModelId(context.Context, int, string) ([]Parameter, error)
 	SaveParameter(context.Context, int, ParameterCreationRequest) (int, error)
 	DeleteParameter(context.Context, int, int) error
 	FindAllTranslations(context.Context, string) ([]Translation, error)

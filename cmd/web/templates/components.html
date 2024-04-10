@@ -2,6 +2,7 @@
     <div>
         <label for="{{ .Name }}">{{ .Label }}</label>
         <input
+            id="{{ .Name }}"
             name="{{ .Name }}"
             type="{{ .Type }}"
             placeholder="{{ .Placeholder }}"
@@ -13,12 +14,118 @@
 {{define "select-box"}}
     <div>
         <label for="{{ .Name }}">{{ .Label }}</label>
-        <select name="{{ .Name }}" class="border border-solid border-gray-400 rounded p-1">
+        <select id="{{ .Name }}" name="{{ .Name }}" class="border border-solid border-gray-400 rounded p-1">
             {{range .Options}}
                 <option value="{{.Key}}">{{ .Value }}</option>
             {{end}}
         </select>
     </div>
+{{end}}
+
+{{define "autocomplete"}}
+    <script type="text/javascript">
+        console.log('test 1');
+    </script>
+    <div>
+        {{ if .Label }}
+            <label for="{{ .Name }}">{{ .Label }}</label>
+        {{ end }}
+        <input
+            hx-get="{{ .GetUrl }}"
+            hx-trigger="keyup changed delay:250ms"
+            hx-target="#search-results-{{ .Name }}"
+            hx-on:keydown="handleKeyPress(event)"
+            hx-on:blur="closeAutocomplete()"
+            id="{{ .Name }}"
+            name="{{ .Name }}"
+            type="text"
+            placeholder="{{ .Placeholder }}"
+            class="border border-solid border-gray-400 rounded p-1 disabled:bg-gray-200 disabled:opacity-50"
+        />
+        <div id="search-results-{{ .Name }}">
+            {{ block "suggestion-list" emptySlice }}
+                {{ if . }}
+                    <div class="absolute border bg-slate-200 w-60">
+                        {{ range $index, $element := . }}
+                            <div
+                                id="suggestion-{{ $index }}"
+                                class="suggestion cursor-pointer hover:bg-slate-100"
+                                data-id="{{ $element.Id }}"
+                            >
+                                {{ $element.Name }}
+                            </div>
+                        {{ end }}
+                    </div>
+                {{ end }}
+            {{ end }}
+        </div>
+    </div>
+    <script type="text/javascript">
+
+        function handleKeyPress(ev) {
+            console.log('handle event', ev);
+            switch (ev.key) {
+            case 'ArrowDown':
+                pressDown();
+                break;
+            case 'ArrowUp':
+                pressUp();
+                break;
+            case 'Enter':
+                select();
+                break;
+            case 'Escape':
+                closeAutocomplete();
+                break;
+            }
+        }
+
+        let selectedSuggestion = -1;
+        function pressUp() {
+            const old = document.getElementById(`suggestion-${selectedSuggestion}`);
+            if (old) {
+                old.classList.remove('bg-emerald-100');
+            }
+
+            selectedSuggestion--
+            if (selectedSuggestion < 0) {
+                selectedSuggestion = 0;
+            }
+
+            const el = document.getElementById(`suggestion-${selectedSuggestion}`);
+            if (el) {
+                el.classList.add('bg-emerald-100');
+            }
+        }
+
+        function pressDown() {
+            const old = document.getElementById(`suggestion-${selectedSuggestion}`);
+            if (old) {
+                old.classList.remove('bg-emerald-100');
+            }
+
+            selectedSuggestion++
+            const length = document.getElementsByClassName('suggestion').length
+            if (selectedSuggestion >= length) {
+                selectedSuggestion = length - 1;
+            }
+
+            const el = document.getElementById(`suggestion-${selectedSuggestion}`);
+            if (el) {
+                el.classList.add('bg-emerald-100');
+            }
+        }
+
+        function select() {
+            const dataId = document.getElementById(`suggestion-${selectedSuggestion}`).getAttribute('data-id');
+            console.log(`selecting element with index ${selectedSuggestion} and data-id ${dataId}`)
+        }
+
+        function closeAutocomplete() {
+            document.getElementById('search-results-{{ .Name }}').innerHTML = '';
+        }
+
+    </script>
 {{end}}
 
 {{define "primary-button"}}
