@@ -9,7 +9,7 @@ import (
 	"github.com/gossie/modelling-service/domain"
 )
 
-func (s *server) postConstraint(w http.ResponseWriter, r *http.Request) {
+func (s *Server) PostConstraint(w http.ResponseWriter, r *http.Request) {
 	slog.InfoContext(r.Context(), "creating new parameter")
 
 	// email := r.Context().Value(middleware.UserIdentifierKey).(string)
@@ -39,7 +39,7 @@ func (s *server) postConstraint(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *server) deleteConstraint(w http.ResponseWriter, r *http.Request) {
+func (s *Server) DeleteConstraint(w http.ResponseWriter, r *http.Request) {
 	modelId, constraintId := r.PathValue("modelId"), r.PathValue("constraintId")
 	slog.InfoContext(r.Context(), fmt.Sprintf("deleting constraint - modelId: %v, constraintId: %v", modelId, constraintId))
 

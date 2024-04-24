@@ -1,18 +1,31 @@
 package rest
 
-type loginInfo struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+type RenderModel struct {
+	Id   int
+	Name string
 }
 
-type loginResponse struct {
-	Token string `json:"token"`
+type RenderParameter struct {
+	Id      int
+	ModelId int
+	Name    string
+	Values  []string
 }
 
-type modelCreationResponse struct {
-	ModelId int `json:"modelId"`
+type RenderConstraint struct {
 }
 
+type ModelCatalogRenderContext struct {
+	Models []RenderModel
+}
+
+type ModelRenderContext struct {
+	Model       RenderModel
+	Parameters  []RenderParameter
+	Constraints []RenderConstraint
+}
+
+// TODO: delete
 type parameterCreationResponse struct {
-	ParameterId int `json:"parameterId"`
+	ParameterId int
 }

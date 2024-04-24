@@ -1,38 +1,5 @@
 package rest
 
-import (
-	"fmt"
-	"log/slog"
-	"net/http"
-
-	"github.com/gossie/modelling-service/domain"
-)
-
-type RenderModel struct {
-	Id   int
-	Name string
-}
-
-type RenderParameter struct {
-	Id      int
-	ModelId int
-	Name    string
-	Values  []string
-}
-
-type RenderConstraint struct {
-}
-
-type ModelCatalogRenderContext struct {
-	Models []RenderModel
-}
-
-type ModelRenderContext struct {
-	Model       RenderModel
-	Parameters  []RenderParameter
-	Constraints []RenderConstraint
-}
-
 func valueOrDefault(value, defaultValue string) string {
 	if value == "" {
 		return defaultValue
@@ -40,7 +7,8 @@ func valueOrDefault(value, defaultValue string) string {
 	return value
 }
 
-func (s *server) renderModelCatalog(w http.ResponseWriter, r *http.Request, email string) {
+/*
+func (s *Server) renderModelCatalog(w http.ResponseWriter, r *http.Request, email string) {
 
 	models, err := s.modelRepository.FindAllByUser(r.Context(), email)
 	if err != nil {
@@ -57,7 +25,7 @@ func (s *server) renderModelCatalog(w http.ResponseWriter, r *http.Request, emai
 	s.tmpl.ExecuteTemplate(w, "model-catalog.html", ModelCatalogRenderContext{Models: renderModels})
 }
 
-func (s *server) renderModelList(w http.ResponseWriter, r *http.Request, email string) {
+func (s *Server) renderModelList(w http.ResponseWriter, r *http.Request, email string) {
 	models, err := s.modelRepository.FindAllByUser(r.Context(), email)
 	if err != nil {
 		slog.WarnContext(r.Context(), fmt.Sprintf("error retrieving models from database: %v", err.Error()))
@@ -73,7 +41,7 @@ func (s *server) renderModelList(w http.ResponseWriter, r *http.Request, email s
 	s.tmpl.ExecuteTemplate(w, "model-list", ModelCatalogRenderContext{Models: renderModels})
 }
 
-func (s *server) renderModel(w http.ResponseWriter, r *http.Request, modelId int) {
+func (s *Server) renderModel(w http.ResponseWriter, r *http.Request, modelId int) {
 	model, err := retrieveData(nil, func() (domain.Model, error) {
 		return s.modelRepository.FindById(r.Context(), modelId)
 	})
@@ -119,7 +87,7 @@ func (s *server) renderModel(w http.ResponseWriter, r *http.Request, modelId int
 	}
 }
 
-func (s *server) renderParameters(w http.ResponseWriter, r *http.Request, modelId int, searchValue string) {
+func (s *Server) renderParameters(w http.ResponseWriter, r *http.Request, modelId int, searchValue string) {
 	parameters, err := retrieveData(nil, func() ([]domain.Parameter, error) {
 		return s.parameterRepository.FindAllByModelId(r.Context(), modelId, searchValue)
 	})
@@ -159,10 +127,6 @@ func (s *server) renderParameters(w http.ResponseWriter, r *http.Request, modelI
 	}
 }
 
-func retrieveData[T any](err error, retriever func() (T, error)) (T, error) {
-	if err == nil {
-		return retriever()
-	}
-	var empty T
-	return empty, err
-}
+
+
+*/

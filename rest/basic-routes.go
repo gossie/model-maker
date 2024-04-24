@@ -8,14 +8,17 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/gossie/modelling-service/views"
 )
 
-func (s *server) getIndex(w http.ResponseWriter, r *http.Request) {
-	slog.InfoContext(r.Context(), "retrieving index page")
-	s.tmpl.ExecuteTemplate(w, "index.html", nil)
+func (s *Server) GetIndex(v *views.View) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		slog.InfoContext(r.Context(), "retrieving index page")
+		v.Render(r.Context(), w, nil)
+	}
 }
 
-func (s *server) login(secret string) http.HandlerFunc {
+func (s *Server) Login(secret string, v *views.View) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		email := r.FormValue("email")
 
@@ -41,7 +44,19 @@ func (s *server) login(secret string) http.HandlerFunc {
 			cookie := http.Cookie{Name: "accessToken", Value: token, Expires: expiration}
 			http.SetCookie(w, &cookie)
 
-			s.renderModelCatalog(w, r, email)
+			models, err := s.modelRepository.FindAllByUser(r.Context(), email)
+			if err != nil {
+				slog.WarnContext(r.Context(), fmt.Sprintf("error retrieving models from database: %v", err.Error()))
+				http.Error(w, err.Error(), 500)
+				return
+			}
+
+			renderModels := make([]RenderModel, len(models))
+			for i := range len(models) {
+				renderModels[i] = RenderModel{Id: models[i].Id, Name: valueOrDefault(models[i].Name, models[i].Translation)}
+			}
+
+			v.Render(r.Context(), w, ModelCatalogRenderContext{Models: renderModels})
 		}
 	}
 }

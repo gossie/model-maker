@@ -2,9 +2,7 @@ package main
 
 import (
 	"database/sql"
-	"embed"
 	"fmt"
-	"html/template"
 	"log"
 	"log/slog"
 	"net/http"
@@ -13,63 +11,6 @@ import (
 	"github.com/gossie/modelling-service/rest"
 	_ "github.com/lib/pq"
 )
-
-type InputField struct {
-	Label       string
-	Name        string
-	Type        string
-	Placeholder string
-}
-
-type Autocomplete struct {
-	Label       string
-	Name        string
-	Type        string
-	Placeholder string
-	GetUrl      string
-}
-
-type Option struct {
-	Key, Value string
-}
-
-type SelectBox struct {
-	Label   string
-	Name    string
-	Options []Option
-}
-
-type PrimaryButton struct {
-	Label string
-}
-
-//go:embed templates/*
-var htmlTemplates embed.FS
-
-var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
-	"inputField": func(label, name, fieldType, placeholder string) InputField {
-		return InputField{Label: label, Name: name, Type: fieldType, Placeholder: placeholder}
-	},
-	"options": func(args ...string) []Option {
-		options := make([]Option, 0, len(args)/2)
-		for i := 0; i < len(args); i += 2 {
-			options = append(options, Option{Key: args[i], Value: args[i+1]})
-		}
-		return options
-	},
-	"selectBox": func(label, name string, options []Option) SelectBox {
-		return SelectBox{Label: label, Name: name, Options: options}
-	},
-	"autocomplete": func(label, name, fieldType, placeholder, getUrl string) Autocomplete {
-		return Autocomplete{Label: label, Name: name, Type: fieldType, Placeholder: placeholder, GetUrl: getUrl}
-	},
-	"primaryButton": func(label string) PrimaryButton {
-		return PrimaryButton{Label: label}
-	},
-	"emptySlice": func() []string {
-		return []string{}
-	},
-}).ParseFS(htmlTemplates, "templates/*.html"))
 
 const (
 	defaultDBHost = "localhost"
@@ -121,7 +62,7 @@ func main() {
 	db := connectToDB()
 	defer db.Close()
 
-	svr := rest.NewServer(tmpl, db, jwtSecrect)
+	svr := rest.NewServer(db, jwtSecrect)
 
 	slog.Info("starting server on port " + port)
 	log.Fatal(http.ListenAndServe(":"+port, svr))
